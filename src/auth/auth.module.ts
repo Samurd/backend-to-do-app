@@ -8,6 +8,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { PrismaService } from 'src/lib/prisma.service';
+import { RefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
 
 @Module({
   imports: [
@@ -15,10 +16,9 @@ import { PrismaService } from 'src/lib/prisma.service';
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '60s' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy, PrismaService]
+  providers: [AuthService, LocalStrategy, JwtStrategy, RefreshTokenStrategy, GoogleStrategy, PrismaService]
 })
 export class AuthModule {}

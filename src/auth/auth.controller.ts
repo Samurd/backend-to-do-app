@@ -5,7 +5,7 @@ import {
   Get,
   Post,
   Query,
-  Request,
+  Request as RequestNest,
   Res,
   Response as ResponseNest,
   UseGuards,
@@ -15,8 +15,9 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
 import { RegisterDto } from './dto/register.dto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { UsersService } from 'src/users/users.service';
+import { RefreshTokenGuard } from './guards/jwt-refresh.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -34,47 +35,54 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req, @Res({ passthrough: true }) res: Response) {
-    const { user, access_token } = await this.authService.login(req.user);
-    res.cookie('access_token', access_token, { httpOnly: true });
+  async login(@RequestNest() req, @Res({ passthrough: true }) res: Response) {
+    const { user } = await this.authService.login(req.user, res);
     return user;
   }
 
-  
   @UseGuards(GoogleAuthGuard)
   @Get('google/login')
   handleLogin() {}
-  
+
   @UseGuards(GoogleAuthGuard)
   @Get('callback/google')
   async handleRedirect(
     @Query('error') error: string | undefined,
-    @Request() req,
+    @RequestNest() req,
     @ResponseNest({ passthrough: true }) res: Response,
   ) {
     const { user } = req;
     const frontendUrl = process.env.FRONTEND_URL;
     const redirectUrl = `${frontendUrl}/todos`;
     const errorRedirectUrl = `${frontendUrl}/login`;
-    
+
     if (error) {
       return res.redirect(errorRedirectUrl);
     }
-    
-    const { access_token } = await this.authService.login(user);
-    res.cookie('access_token', access_token, { httpOnly: true });
+
+    await this.authService.login(user, res);
+
     return res.redirect(redirectUrl);
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Post('refresh')
+  async refresh(@RequestNest() req, @Res({ passthrough: true }) res: Response) {
+    const { user } = await this.authService.login(req.user, res);
+    return { user };
   }
 
   @Get('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
     return {};
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Request() req) {
-    return req.user;
+  getProfile(@RequestNest() req) {
+    const user = req.user;
+    return this.usersService.findUserById(user.id);
   }
 }

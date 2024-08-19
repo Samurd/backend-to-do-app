@@ -6,6 +6,19 @@ import { CreateUserDto } from './dto/create-user.dto';
 export class UsersService {
   constructor(private prismaService: PrismaService) {}
 
+  async findUserById(id: string) {
+    try {
+      return await this.prismaService.users.findFirst({
+        where: {
+          id
+        }
+      })
+
+    } catch {
+      throw new InternalServerErrorException('Error retrieving user');
+    }
+  }
+
   async findOneByEmail(email: string): Promise<any> | null {
     try {
       const user = await this.prismaService.users.findFirst({
@@ -51,6 +64,21 @@ export class UsersService {
       return data;
     } catch (error) {
       throw new InternalServerErrorException('Error creating user');
+    }
+  }
+
+  async updateUser(id: string, data: any) {
+    try {
+      return await this.prismaService.users.update({
+        where: {
+          id,
+        },
+        data: {
+          ...data,
+        }
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error updating user');
     }
   }
 }
